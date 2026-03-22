@@ -18,7 +18,7 @@ export default defineConfig(({ command, mode }) => {
     root: __dirname,
     cacheDir: '../../node_modules/.vite/packages/web',
     server: {
-      // allowedHosts: ['wozcsvaint.loclx.io'],
+      allowedHosts: ['deedee-nonpredicative-ester.ngrok-free.dev'],
       proxy: {
         '/api': {
           target: 'http://127.0.0.1:3000',
