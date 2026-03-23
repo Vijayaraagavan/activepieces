@@ -27,6 +27,20 @@ Welcome to our customized fork of Activepieces! To avoid merge conflict nightmar
 * 2026-03-22 | [docs/custom/ngrok-webhook-dev-setup.md](docs/custom/ngrok-webhook-dev-setup.md) | Codex | Added troubleshooting notes for local webhook testing with ngrok, including the `4200` vs `3000` routing confusion, `AP_FRONTEND_URL` behavior, and Vite `allowedHosts` requirement.
 * 2026-03-23 | [docs/custom/headless-activepieces-architecture.md](docs/custom/headless-activepieces-architecture.md) | Codex | Documented the headless Activepieces architecture: external workspace/org to Activepieces team project mapping, backend-owned users and permissions, Activepieces as connection/workflow control plane, and custom backend responsibility for direct actions and sync pipelines.
 
+### exclude enterprise editon that are licensed
+* we must not use the below modules in self host due to licensing restriction. remove them during fork sync or merge.
+```
+➜ find . -type d -name "ee"
+./dist/packages/ee
+./packages/tests-e2e/scenarios/ee
+./packages/ee
+./packages/server/api/test/unit/app/ee
+./packages/server/api/test/integration/ee
+./packages/server/api/src/app/ee
+./packages/shared/dist/src/lib/ee
+./packages/shared/src/lib/ee
+```
+
 ### dev setup
 create pg database
 ```
