@@ -63,12 +63,30 @@ WORKDIR /usr/src/app
 COPY .npmrc package.json bun.lock bunfig.toml ./
 COPY packages/ ./packages/
 
-# Install all dependencies with frozen lockfile
+# Strip test-only workspace and dependencies that aren't needed for the build
+RUN node -e " \
+  const pkg = require('./package.json'); \
+  pkg.workspaces = pkg.workspaces.filter(w => w !== 'packages/tests-e2e'); \
+  delete pkg.dependencies['checkly']; \
+  delete pkg.devDependencies['@playwright/test']; \
+  require('fs').writeFileSync('./package.json', JSON.stringify(pkg, null, 2) + '\n'); \
+"
+
+# Install all dependencies (lockfile is regenerated after workspace trimming)
 RUN --mount=type=cache,target=/root/.bun/install/cache \
-    bun install --frozen-lockfile
+    rm -f bun.lock && bun install
 
 # Copy remaining source code (turbo config, etc.)
 COPY . .
+
+# Re-strip test-only workspace/deps after full COPY overwrites package.json
+RUN node -e " \
+  const pkg = require('./package.json'); \
+  pkg.workspaces = pkg.workspaces.filter(w => w !== 'packages/tests-e2e'); \
+  delete pkg.dependencies['checkly']; \
+  delete pkg.devDependencies['@playwright/test']; \
+  require('fs').writeFileSync('./package.json', JSON.stringify(pkg, null, 2) + '\n'); \
+"
 
 # Build frontend, engine, server API, and worker
 RUN npx turbo run build --filter=web --filter=@activepieces/engine --filter=api --filter=worker
