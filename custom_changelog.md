@@ -28,6 +28,12 @@ Welcome to our customized fork of Activepieces! To avoid merge conflict nightmar
 * 2026-03-23 | [docs/custom/headless-activepieces-architecture.md](docs/custom/headless-activepieces-architecture.md) | Codex | Documented the headless Activepieces architecture: external workspace/org to Activepieces team project mapping, backend-owned users and permissions, Activepieces as connection/workflow control plane, and custom backend responsibility for direct actions and sync pipelines.
 * 2026-04-03 | [docs/custom/headless-openapi.yaml](docs/custom/headless-openapi.yaml) | Cursor | OpenAPI 3.0 spec for the headless internal API (projects, flows, flow runs, webhooks, connections, pieces).
 * 2026-04-03 | [docs/custom/headless-api-testing.md](docs/custom/headless-api-testing.md) | Cursor | Curl-based API testing guide covering the full flow lifecycle, webhook triggers, connections, and an end-to-end script.
+* 2026-04-03 | [docs/custom/admin-ui-guide.md](docs/custom/admin-ui-guide.md) | Cursor | Documentation for the Admin UI frontend app (setup, features, OAuth2 flow, templates).
+
+### Admin UI — Headless API Testing App
+*Created 2026-04-03. Independent React frontend at `packages/custom/admin-ui/` for managing and testing headless AP APIs. No core file modifications — entirely new files.*
+
+* 2026-04-03 | `packages/custom/admin-ui/` | Cursor | New independent React + Vite + Tailwind app with: projects CRUD, flows CRUD with operation builder, flow runs viewer with auto-refresh, connections management (Secret Text, Basic Auth, Custom Auth, OAuth2 popup flow), pieces browser, 7 built-in flow templates (webhook+code, schedule+http, webhook+router, google-sheets OAuth, slack OAuth), webhook tester, and settings page with health check.
 
 ### Headless Internal Auth Bypass (Superuser Principal)
 *Implemented 2026-04-03. Allows backend-to-backend access via `x-internal-api-key` header, bypassing all auth/authz for trusted internal requests.*

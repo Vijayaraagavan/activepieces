@@ -74,6 +74,9 @@ export const appConnectionService = (log: FastifyBaseLogger) => ({
             pieceName,
             projectId: projectIds[0],
             platformId,
+            // --- MY_CUSTOM_START: Skip engine validation for headless requests ---
+            skipEngineValidation: params.skipEngineValidation,
+            // --- MY_CUSTOM_END ---
         }, log)
 
         const encryptedConnectionValue = await encryptUtils.encryptObject({
@@ -405,7 +408,9 @@ const validateConnectionValue = async (
     params: ValidateConnectionValueParams,
     log: FastifyBaseLogger,
 ): Promise<AppConnectionValue> => {
-    const { value, pieceName, projectId, platformId } = params
+    // --- MY_CUSTOM_START: Skip engine validation for headless requests ---
+    const { value, pieceName, projectId, platformId, skipEngineValidation } = params
+    // --- MY_CUSTOM_END ---
 
     switch (value.type) {
         case AppConnectionType.PLATFORM_OAUTH2: {
@@ -475,12 +480,16 @@ const validateConnectionValue = async (
                     scope: value.scope,
                 },
             })
-            await engineValidateAuth({
-                pieceName,
-                projectId,
-                platformId,
-                auth,
-            }, log)
+            // --- MY_CUSTOM_START: Skip engine validation for headless requests ---
+            if (!skipEngineValidation) {
+                await engineValidateAuth({
+                    pieceName,
+                    projectId,
+                    platformId,
+                    auth,
+                }, log)
+            }
+            // --- MY_CUSTOM_END ---
             return auth
         }
         case AppConnectionType.NO_AUTH:
@@ -488,12 +497,16 @@ const validateConnectionValue = async (
         case AppConnectionType.CUSTOM_AUTH:
         case AppConnectionType.BASIC_AUTH:
         case AppConnectionType.SECRET_TEXT:
-            await engineValidateAuth({
-                platformId,
-                pieceName,
-                projectId,
-                auth: value,
-            }, log)
+            // --- MY_CUSTOM_START: Skip engine validation for headless requests ---
+            if (!skipEngineValidation) {
+                await engineValidateAuth({
+                    platformId,
+                    pieceName,
+                    projectId,
+                    auth: value,
+                }, log)
+            }
+            // --- MY_CUSTOM_END ---
     }
 
     return value
@@ -638,6 +651,9 @@ type UpsertParams = {
     metadata?: Metadata
     pieceVersion?: string
     preSelectForNewProjects?: boolean
+    // --- MY_CUSTOM_START: Skip engine validation for headless requests ---
+    skipEngineValidation?: boolean
+    // --- MY_CUSTOM_END ---
 }
 
 
@@ -669,6 +685,9 @@ type ValidateConnectionValueParams = {
     pieceName: string
     projectId: ProjectId | undefined
     platformId: string
+    // --- MY_CUSTOM_START: Skip engine validation for headless requests ---
+    skipEngineValidation?: boolean
+    // --- MY_CUSTOM_END ---
 }
 
 type ListParams = {

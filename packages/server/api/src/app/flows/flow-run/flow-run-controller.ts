@@ -153,6 +153,16 @@ export const flowRunController: FastifyPluginAsyncZod = async (app) => {
         })
     })
 
+    // --- MY_CUSTOM_START: Headless test flow run endpoint ---
+    app.post('/test', TestFlowRunRequest, async (req) => {
+        return flowRunService(req.log).startManualTrigger({
+            projectId: req.body.projectId,
+            flowVersionId: req.body.flowVersionId,
+            triggeredBy: req.principal.id,
+        })
+    })
+    // --- MY_CUSTOM_END ---
+
 }
 
 const FlowRunFiltered = FlowRun.omit({ pauseMetadata: true })
@@ -269,3 +279,27 @@ const BulkRetryFlowRequest = {
         body: BulkActionOnRunsRequestBody,
     },
 }
+
+// --- MY_CUSTOM_START: Headless test flow run schema ---
+const TestFlowRunRequest = {
+    config: {
+        security: securityAccess.project(
+            [PrincipalType.USER, PrincipalType.SERVICE],
+            Permission.WRITE_RUN, {
+                type: ProjectResourceType.BODY,
+            }),
+    },
+    schema: {
+        tags: ['flow-runs'],
+        description: 'Trigger an immediate test run of a flow version',
+        security: [SERVICE_KEY_SECURITY_OPENAPI],
+        body: z.object({
+            projectId: ApId,
+            flowVersionId: ApId,
+        }),
+        response: {
+            [StatusCodes.OK]: FlowRunFiltered,
+        },
+    },
+}
+// --- MY_CUSTOM_END ---

@@ -20,6 +20,9 @@ import { StatusCodes } from 'http-status-codes'
 import { z } from 'zod'
 import { ProjectResourceType } from '../core/security/authorization/common'
 import { securityAccess } from '../core/security/authorization/fastify-security'
+// --- MY_CUSTOM_START: Headless skip engine validation import ---
+import { isInternalRequest } from '../core/security/v2/authn/authentication-middleware'
+// --- MY_CUSTOM_END ---
 import { applicationEvents } from '../helper/application-events'
 import { securityHelper } from '../helper/security-helper'
 import { appConnectionService } from './app-connection-service/app-connection-service'
@@ -40,6 +43,9 @@ export const appConnectionController: FastifyPluginCallbackZod = (app, _opts, do
             scope: AppConnectionScope.PROJECT,
             metadata: request.body.metadata,
             pieceVersion: request.body.pieceVersion,
+            // --- MY_CUSTOM_START: Skip engine validation for headless requests ---
+            skipEngineValidation: isInternalRequest(request),
+            // --- MY_CUSTOM_END ---
         })
         applicationEvents(request.log).sendUserEvent(request, {
             action: ApplicationEventName.CONNECTION_UPSERTED,

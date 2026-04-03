@@ -59,6 +59,12 @@ components:
         type:
           type: string
           enum: [PERSONAL, TEAM]
+        icon:
+          type: object
+          nullable: true
+          properties:
+            color:
+              type: string
         externalId:
           type: string
           nullable: true
@@ -94,6 +100,15 @@ components:
         publishedVersionId:
           type: string
           nullable: true
+        operationStatus:
+          type: string
+          enum: [NONE, PUBLISHING]
+        timeSavedPerRun:
+          type: integer
+          nullable: true
+        templateId:
+          type: string
+          nullable: true
         metadata:
           type: object
           nullable: true
@@ -115,13 +130,37 @@ components:
           type: string
         displayName:
           type: string
+        schemaVersion:
+          type: string
+          example: "18"
         trigger:
           type: object
+          description: Trigger definition (varies by trigger type).
+        updatedBy:
+          type: string
+          nullable: true
         valid:
           type: boolean
         state:
           type: string
           enum: [DRAFT, LOCKED]
+        connectionIds:
+          type: array
+          items:
+            type: string
+          description: List of connectionExternalIds referenced by this version.
+        agentIds:
+          type: array
+          items:
+            type: string
+        notes:
+          type: array
+          items:
+            type: object
+          nullable: true
+        backupFiles:
+          type: object
+          nullable: true
 
     FlowRun:
       type: object
@@ -140,21 +179,128 @@ components:
           type: string
         flowVersionId:
           type: string
-        flowDisplayName:
+        flowVersion:
+          type: object
+          description: Embedded flow version summary.
+          properties:
+            displayName:
+              type: string
+              description: Display name of the flow at the time of the run.
+        environment:
           type: string
+          enum: [PRODUCTION, TESTING]
         status:
           type: string
-          enum: [RUNNING, SUCCEEDED, FAILED, PAUSED, TIMEOUT, INTERNAL_ERROR, STOPPED, QUOTA_EXCEEDED, MEMORY_LIMIT_EXCEEDED]
+          enum:
+            - QUEUED
+            - RUNNING
+            - SUCCEEDED
+            - FAILED
+            - PAUSED
+            - TIMEOUT
+            - INTERNAL_ERROR
+            - CANCELED
+            - QUOTA_EXCEEDED
+            - MEMORY_LIMIT_EXCEEDED
+            - LOG_SIZE_EXCEEDED
         startTime:
           type: string
           format: date-time
+          nullable: true
+          description: Null while the run is QUEUED.
         finishTime:
           type: string
           format: date-time
           nullable: true
-        duration:
-          type: integer
+        triggeredBy:
+          type: string
           nullable: true
+          description: User ID that triggered the run.
+        tags:
+          type: array
+          items:
+            type: string
+        parentRunId:
+          type: string
+          nullable: true
+        failParentOnFailure:
+          type: boolean
+        logsFileId:
+          type: string
+          nullable: true
+        failedStep:
+          type: object
+          nullable: true
+          properties:
+            name:
+              type: string
+            displayName:
+              type: string
+        stepsCount:
+          type: integer
+        archivedAt:
+          type: string
+          format: date-time
+          nullable: true
+
+    AppConnection:
+      type: object
+      properties:
+        id:
+          type: string
+        created:
+          type: string
+          format: date-time
+        updated:
+          type: string
+          format: date-time
+        pieceName:
+          type: string
+        displayName:
+          type: string
+        externalId:
+          type: string
+        projectIds:
+          type: array
+          items:
+            type: string
+        type:
+          type: string
+          enum: [SECRET_TEXT, OAUTH2, PLATFORM_OAUTH2, CLOUD_OAUTH2, CUSTOM_AUTH, BASIC_AUTH, NO_AUTH]
+        status:
+          type: string
+          enum: [ACTIVE, ERROR, MISSING]
+      description: Sensitive credential values are redacted in list/get responses.
+
+    PieceMetadataSummary:
+      type: object
+      properties:
+        name:
+          type: string
+          example: '@activepieces/piece-slack'
+        displayName:
+          type: string
+          example: Slack
+        description:
+          type: string
+        logoUrl:
+          type: string
+        version:
+          type: string
+        auth:
+          description: Auth configuration (may be object, array, or null).
+          oneOf:
+            - type: object
+            - type: array
+              items:
+                type: object
+            - type: "null"
+        actions:
+          type: integer
+          description: Number of available actions.
+        triggers:
+          type: integer
+          description: Number of available triggers.
 
     SeekPage:
       type: object
@@ -180,6 +326,205 @@ components:
           type: string
         message:
           type: string
+
+    # ── Flow Operation Schemas ──────────────────────────────
+
+    UpdateTriggerOp:
+      type: object
+      required: [type, request]
+      properties:
+        type:
+          type: string
+          enum: [UPDATE_TRIGGER]
+        request:
+          type: object
+          required: [name, displayName, type, valid, settings, lastUpdatedDate]
+          properties:
+            name:
+              type: string
+              example: trigger
+            displayName:
+              type: string
+            type:
+              type: string
+              enum: [PIECE_TRIGGER, EMPTY]
+            valid:
+              type: boolean
+            lastUpdatedDate:
+              type: string
+              format: date-time
+              description: Required — use current ISO timestamp.
+            settings:
+              type: object
+              properties:
+                pieceName:
+                  type: string
+                pieceVersion:
+                  type: string
+                triggerName:
+                  type: string
+                input:
+                  type: object
+                inputUiInfo:
+                  type: object
+                propertySettings:
+                  type: object
+                packageType:
+                  type: string
+                  enum: [REGISTRY, ARCHIVE]
+                pieceType:
+                  type: string
+                  enum: [OFFICIAL, COMMUNITY, CUSTOM]
+
+    AddActionOp:
+      type: object
+      required: [type, request]
+      properties:
+        type:
+          type: string
+          enum: [ADD_ACTION]
+        request:
+          type: object
+          required: [parentStep, stepLocationRelativeToParent, action]
+          properties:
+            parentStep:
+              type: string
+              example: trigger
+            stepLocationRelativeToParent:
+              type: string
+              enum: [AFTER, INSIDE_TRUE_BRANCH, INSIDE_FALSE_BRANCH, INSIDE_LOOP]
+            action:
+              type: object
+              required: [name, displayName, type, valid, settings, lastUpdatedDate]
+              properties:
+                name:
+                  type: string
+                  example: step_1
+                displayName:
+                  type: string
+                type:
+                  type: string
+                  enum: [CODE, PIECE, ROUTER, LOOP_ON_ITEMS]
+                valid:
+                  type: boolean
+                lastUpdatedDate:
+                  type: string
+                  format: date-time
+                errorHandlingOptions:
+                  type: object
+                  default: {}
+                settings:
+                  type: object
+
+    ImportFlowOp:
+      type: object
+      required: [type, request]
+      properties:
+        type:
+          type: string
+          enum: [IMPORT_FLOW]
+        request:
+          type: object
+          required: [displayName, trigger]
+          properties:
+            displayName:
+              type: string
+            trigger:
+              type: object
+              description: |
+                Full trigger definition. Must include `lastUpdatedDate` (ISO string)
+                on the trigger and every nested action.
+            schemaVersion:
+              type: string
+              nullable: true
+              example: "18"
+            notes:
+              type: array
+              items:
+                type: object
+              nullable: true
+
+    LockAndPublishOp:
+      type: object
+      required: [type]
+      properties:
+        type:
+          type: string
+          enum: [LOCK_AND_PUBLISH]
+
+    ChangeStatusOp:
+      type: object
+      required: [type, request]
+      properties:
+        type:
+          type: string
+          enum: [CHANGE_STATUS]
+        request:
+          type: object
+          required: [status]
+          properties:
+            status:
+              type: string
+              enum: [ENABLED, DISABLED]
+
+    ChangeNameOp:
+      type: object
+      required: [type, request]
+      properties:
+        type:
+          type: string
+          enum: [CHANGE_NAME]
+        request:
+          type: object
+          required: [displayName]
+          properties:
+            displayName:
+              type: string
+
+    DeleteActionOp:
+      type: object
+      required: [type, request]
+      properties:
+        type:
+          type: string
+          enum: [DELETE_ACTION]
+        request:
+          type: object
+          required: [names]
+          properties:
+            names:
+              type: array
+              items:
+                type: string
+
+    UpdateActionOp:
+      type: object
+      required: [type, request]
+      properties:
+        type:
+          type: string
+          enum: [UPDATE_ACTION]
+        request:
+          type: object
+          required: [name, displayName, type, valid, settings, lastUpdatedDate]
+          properties:
+            name:
+              type: string
+            displayName:
+              type: string
+            type:
+              type: string
+              enum: [CODE, PIECE, ROUTER, LOOP_ON_ITEMS]
+            valid:
+              type: boolean
+            lastUpdatedDate:
+              type: string
+              format: date-time
+            errorHandlingOptions:
+              type: object
+              default: {}
+            settings:
+              type: object
 
 paths:
   # ── Projects ──────────────────────────────────────────────
@@ -275,6 +620,9 @@ paths:
               properties:
                 displayName:
                   type: string
+                metadata:
+                  type: object
+                  nullable: true
       responses:
         '200':
           description: Updated project
@@ -344,9 +692,21 @@ paths:
             type: string
         - name: status
           in: query
+          description: Filter by one or more statuses (array).
+          schema:
+            type: array
+            items:
+              type: string
+              enum: [ENABLED, DISABLED]
+        - name: name
+          in: query
           schema:
             type: string
-            enum: [ENABLED, DISABLED]
+            description: Filter flows by name (partial match).
+        - name: folderId
+          in: query
+          schema:
+            type: string
       responses:
         '200':
           description: Paginated list of flows
@@ -372,6 +732,11 @@ paths:
           required: true
           schema:
             type: string
+        - name: versionId
+          in: query
+          schema:
+            type: string
+            description: Optional specific version ID to return.
       responses:
         '200':
           description: Flow details
@@ -384,15 +749,19 @@ paths:
       tags: [Flows]
       summary: Update a flow (operations)
       description: |
-        Applies an operation to the flow. Operations include:
+        Applies an operation to the flow's draft version. Operations include:
 
-        - `UPDATE_TRIGGER` — Set or change the trigger (schedule, webhook, piece trigger)
+        - `IMPORT_FLOW` — Replace the entire flow definition (trigger + actions)
+        - `UPDATE_TRIGGER` — Set or change the trigger
         - `ADD_ACTION` — Add a step after an existing step
         - `UPDATE_ACTION` — Modify an existing step
-        - `DELETE_ACTION` — Remove a step
+        - `DELETE_ACTION` — Remove step(s) by name
         - `LOCK_AND_PUBLISH` — Lock the draft and create a published version
         - `CHANGE_STATUS` — Enable or disable the flow
         - `CHANGE_NAME` — Rename the flow
+
+        **Important:** Trigger and action definitions require `lastUpdatedDate` (ISO string)
+        and actions require `errorHandlingOptions: {}`. Without these, the server returns 400.
       parameters:
         - name: flowId
           in: path
@@ -405,8 +774,11 @@ paths:
           application/json:
             schema:
               oneOf:
+                - $ref: '#/components/schemas/ImportFlowOp'
                 - $ref: '#/components/schemas/UpdateTriggerOp'
                 - $ref: '#/components/schemas/AddActionOp'
+                - $ref: '#/components/schemas/UpdateActionOp'
+                - $ref: '#/components/schemas/DeleteActionOp'
                 - $ref: '#/components/schemas/LockAndPublishOp'
                 - $ref: '#/components/schemas/ChangeStatusOp'
                 - $ref: '#/components/schemas/ChangeNameOp'
@@ -473,6 +845,9 @@ paths:
     get:
       tags: [Flow Runs]
       summary: List flow runs
+      description: |
+        Returns production-environment runs. Each run includes an embedded
+        `flowVersion.displayName` for display purposes.
       parameters:
         - name: projectId
           in: query
@@ -481,13 +856,30 @@ paths:
             type: string
         - name: flowId
           in: query
+          description: Filter by one or more flow IDs (array).
           schema:
-            type: string
+            type: array
+            items:
+              type: string
         - name: status
           in: query
+          description: Filter by one or more statuses (array).
           schema:
-            type: string
-            enum: [RUNNING, SUCCEEDED, FAILED, PAUSED, TIMEOUT, INTERNAL_ERROR, STOPPED]
+            type: array
+            items:
+              type: string
+              enum:
+                - QUEUED
+                - RUNNING
+                - SUCCEEDED
+                - FAILED
+                - PAUSED
+                - TIMEOUT
+                - INTERNAL_ERROR
+                - CANCELED
+                - QUOTA_EXCEEDED
+                - MEMORY_LIMIT_EXCEEDED
+                - LOG_SIZE_EXCEEDED
         - name: limit
           in: query
           schema:
@@ -507,6 +899,17 @@ paths:
           schema:
             type: string
             format: date-time
+        - name: tags
+          in: query
+          schema:
+            type: array
+            items:
+              type: string
+        - name: includeArchived
+          in: query
+          schema:
+            type: boolean
+            default: false
       responses:
         '200':
           description: Paginated list of flow runs
@@ -540,6 +943,36 @@ paths:
               schema:
                 $ref: '#/components/schemas/FlowRun'
 
+  /flow-runs/test:
+    post:
+      tags: [Flow Runs]
+      summary: Trigger a manual flow run
+      description: |
+        Immediately triggers a flow run for the given published flow version.
+        The flow must be published (LOCKED) before it can be run. Creates a
+        PRODUCTION-environment run visible in the standard list endpoint.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [projectId, flowVersionId]
+              properties:
+                projectId:
+                  type: string
+                  description: Project the flow belongs to.
+                flowVersionId:
+                  type: string
+                  description: ID of the published (LOCKED) flow version to execute.
+      responses:
+        '200':
+          description: Flow run created and queued
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FlowRun'
+
   # ── Webhooks ──────────────────────────────────────────────
 
   /webhooks/{flowId}:
@@ -550,6 +983,8 @@ paths:
         Sends a payload to a flow configured with a webhook trigger.
         This endpoint is PUBLIC (no auth required) — the `flowId` in the URL
         acts as the secret. Secure it by keeping the flow ID private.
+
+        Supports any HTTP method (GET, POST, PUT, etc.).
       security: []
       parameters:
         - name: flowId
@@ -576,6 +1011,7 @@ paths:
     get:
       tags: [App Connections]
       summary: List connections in a project
+      description: Returns connections with sensitive values redacted.
       parameters:
         - name: projectId
           in: query
@@ -598,10 +1034,24 @@ paths:
       responses:
         '200':
           description: Paginated list of connections
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SeekPage'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/AppConnection'
 
     post:
       tags: [App Connections]
-      summary: Create or update a connection
+      summary: Create or update a connection (upsert)
+      description: |
+        Creates a new connection or updates an existing one by `externalId`.
+        For internal/headless requests, engine validation is skipped.
       requestBody:
         required: true
         content:
@@ -617,16 +1067,87 @@ paths:
                   example: '@activepieces/piece-slack'
                 displayName:
                   type: string
-                  example: My Slack
+                  example: My Slack Connection
+                externalId:
+                  type: string
+                  description: Your external identifier for this connection. Used in flow definitions as `{{connections['externalId']}}`.
                 type:
                   type: string
-                  enum: [SECRET_TEXT, OAUTH2, CUSTOM_AUTH, BASIC_AUTH, BEARER_TOKEN]
+                  enum: [SECRET_TEXT, OAUTH2, PLATFORM_OAUTH2, CLOUD_OAUTH2, CUSTOM_AUTH, BASIC_AUTH, NO_AUTH]
                 value:
                   type: object
-                  description: Connection credentials (varies by type)
+                  description: |
+                    Connection credentials — structure varies by `type`:
+                    - **SECRET_TEXT:** `{ type: "SECRET_TEXT", secret_text: "..." }`
+                    - **OAUTH2:** `{ type: "OAUTH2", client_id, client_secret, code, scope, redirect_url, authorization_method? }`
+                    - **BASIC_AUTH:** `{ type: "BASIC_AUTH", username, password }`
+                    - **CUSTOM_AUTH:** `{ type: "CUSTOM_AUTH", props: { key: value, ... } }`
+                    - **NO_AUTH:** `{ type: "NO_AUTH" }`
       responses:
         '201':
-          description: Connection created
+          description: Connection created or updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AppConnection'
+
+  /app-connections/{id}:
+    delete:
+      tags: [App Connections]
+      summary: Delete a connection
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '204':
+          description: Connection deleted
+
+  /app-connections/oauth2/authorization-url:
+    post:
+      tags: [App Connections]
+      summary: Build OAuth2 authorization URL
+      description: |
+        Generates the OAuth2 authorization URL for a piece. Your frontend
+        should open this URL in a popup/redirect. After the user authorizes,
+        exchange the returned `code` via the connection upsert endpoint.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [pieceName, clientId, redirectUrl]
+              properties:
+                pieceName:
+                  type: string
+                  example: '@activepieces/piece-notion'
+                pieceVersion:
+                  type: string
+                clientId:
+                  type: string
+                redirectUrl:
+                  type: string
+                  example: http://localhost:5173/oauth/callback
+                props:
+                  type: object
+                  description: Extra properties required by some pieces (e.g. scopes).
+      responses:
+        '200':
+          description: Authorization URL generated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  authorizationUrl:
+                    type: string
+                    description: URL to redirect the user to for OAuth consent.
+                  codeVerifier:
+                    type: string
+                    description: PKCE code verifier (if the piece uses PKCE).
 
   # ── Pieces ────────────────────────────────────────────────
 
@@ -634,138 +1155,54 @@ paths:
     get:
       tags: [Pieces]
       summary: List available pieces
+      description: |
+        Returns a **plain JSON array** (not paginated SeekPage) of piece
+        summaries with name, display name, logo, and action/trigger counts.
       parameters:
-        - name: limit
-          in: query
-          schema:
-            type: integer
-            default: 100
-        - name: cursor
+        - name: searchQuery
           in: query
           schema:
             type: string
-        - name: searchQuery
+        - name: includeHidden
+          in: query
+          schema:
+            type: boolean
+      responses:
+        '200':
+          description: Array of piece summaries
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/PieceMetadataSummary'
+
+  /pieces/{name}:
+    get:
+      tags: [Pieces]
+      summary: Get piece details
+      description: |
+        Returns full piece metadata including all actions, triggers, and auth
+        configuration. The `name` parameter should be URL-encoded
+        (e.g. `%40activepieces%2Fpiece-slack`).
+      parameters:
+        - name: name
+          in: path
+          required: true
+          schema:
+            type: string
+          example: '%40activepieces%2Fpiece-slack'
+        - name: version
           in: query
           schema:
             type: string
       responses:
         '200':
-          description: Paginated list of pieces
-
-  # ── Operation Schemas (for flow update) ───────────────────
-
-  UpdateTriggerOp:
-    type: object
-    required: [type, request]
-    properties:
-      type:
-        type: string
-        enum: [UPDATE_TRIGGER]
-      request:
-        type: object
-        required: [name, displayName, type, valid, settings]
-        properties:
-          name:
-            type: string
-            example: trigger
-          displayName:
-            type: string
-          type:
-            type: string
-            enum: [PIECE_TRIGGER, EMPTY]
-          valid:
-            type: boolean
-          settings:
-            type: object
-            properties:
-              pieceName:
-                type: string
-              pieceVersion:
-                type: string
-              triggerName:
-                type: string
-              input:
+          description: Full piece metadata
+          content:
+            application/json:
+              schema:
                 type: object
-              inputUiInfo:
-                type: object
-              propertySettings:
-                type: object
-              packageType:
-                type: string
-                enum: [REGISTRY, ARCHIVE]
-              pieceType:
-                type: string
-                enum: [OFFICIAL, COMMUNITY, CUSTOM]
-
-  AddActionOp:
-    type: object
-    required: [type, request]
-    properties:
-      type:
-        type: string
-        enum: [ADD_ACTION]
-      request:
-        type: object
-        required: [parentStep, stepLocationRelativeToParent, action]
-        properties:
-          parentStep:
-            type: string
-            example: trigger
-          stepLocationRelativeToParent:
-            type: string
-            enum: [AFTER, INSIDE_TRUE_BRANCH, INSIDE_FALSE_BRANCH, INSIDE_LOOP]
-          action:
-            type: object
-            required: [name, displayName, type, valid, settings]
-            properties:
-              name:
-                type: string
-                example: step_1
-              displayName:
-                type: string
-              type:
-                type: string
-                enum: [CODE, PIECE, BRANCH, LOOP_ON_ITEMS]
-              valid:
-                type: boolean
-              settings:
-                type: object
-
-  LockAndPublishOp:
-    type: object
-    required: [type, request]
-    properties:
-      type:
-        type: string
-        enum: [LOCK_AND_PUBLISH]
-      request:
-        type: object
-
-  ChangeStatusOp:
-    type: object
-    required: [type, request]
-    properties:
-      type:
-        type: string
-        enum: [CHANGE_STATUS]
-      request:
-        type: object
-        required: [status]
-        properties:
-          status:
-            type: string
-            enum: [ENABLED, DISABLED]
-
-  ChangeNameOp:
-    type: object
-    required: [type, request]
-    properties:
-      type:
-        type: string
-        enum: [CHANGE_NAME]
-      request:
-        type: object
-        required: [displayName]
-        properties:
-          displayName:
-            type: string
+                description: |
+                  Full piece metadata including `actions` (object map),
+                  `triggers` (object map), and `auth` configuration.
