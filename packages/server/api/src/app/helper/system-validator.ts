@@ -47,6 +47,9 @@ const systemPropValidators: {
 } = {
     // AppSystemProp
     [AppSystemProp.EXECUTION_MODE]: enumValidator(Object.values(ExecutionMode)),
+    // --- MY_CUSTOM_START: Skip migrations validator ---
+    [AppSystemProp.SKIP_MIGRATIONS]: booleanValidator,
+    // --- MY_CUSTOM_END ---
     [AppSystemProp.SKIP_PROJECT_LIMITS_CHECK]: booleanValidator,
     [AppSystemProp.LOG_LEVEL]: enumValidator(['error', 'warn', 'info', 'debug', 'trace']),
     [AppSystemProp.LOG_PRETTY]: booleanValidator,
@@ -143,7 +146,11 @@ const systemPropValidators: {
     [AppSystemProp.FIREBASE_HASH_PARAMETERS]: stringValidator,
     [AppSystemProp.STRIPE_SECRET_KEY]: stringValidator,
     [AppSystemProp.STRIPE_WEBHOOK_SECRET]: stringValidator,
+    // --- MY_CUSTOM_START: Headless internal auth validators ---
+    [AppSystemProp.INTERNAL_API_KEY]: stringValidator,
+    [AppSystemProp.INTERNAL_PLATFORM_ID]: stringValidator,
     [AppSystemProp.INTERNAL_URL]: stringValidator,
+    // --- MY_CUSTOM_END ---
     [AppSystemProp.WORKERS]: numberValidator,
     [AppSystemProp.EDITION]: enumValidator(Object.values(ApEdition)),
     [AppSystemProp.FEATUREBASE_API_KEY]: stringValidator,

@@ -56,11 +56,19 @@ function setupTimeZone(): void {
 const main = async (): Promise<void> => {
     setupTimeZone()
     if (system.isApp()) {
-        await distributedLock(system.globalLogger()).runExclusive({
-            key: 'database-migration-lock',
-            timeoutInSeconds: dayjs.duration(10, 'minutes').asSeconds(),
-            fn: async () => initializeDatabase({ runMigrations: true }),
-        })
+        // --- MY_CUSTOM_START: Skip migrations for faster dev restart ---
+        const skipMigrations = system.getBoolean(AppSystemProp.SKIP_MIGRATIONS) ?? false
+        if (skipMigrations) {
+            await initializeDatabase({ runMigrations: false })
+        }
+        else {
+        // --- MY_CUSTOM_END ---
+            await distributedLock(system.globalLogger()).runExclusive({
+                key: 'database-migration-lock',
+                timeoutInSeconds: dayjs.duration(10, 'minutes').asSeconds(),
+                fn: async () => initializeDatabase({ runMigrations: true }),
+            })
+        }
     }
     const app = await setupServer()
 

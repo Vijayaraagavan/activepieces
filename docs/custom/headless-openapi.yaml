@@ -1,0 +1,771 @@
+openapi: 3.0.3
+info:
+  title: Activepieces Headless API
+  description: |
+    Internal API for using Activepieces as a headless workflow automation service.
+
+    **Authentication:** All requests require an `x-internal-api-key` header matching
+    the `AP_INTERNAL_API_KEY` environment variable configured on the server. This is
+    a backend-to-backend API — Activepieces must NOT be publicly exposed.
+
+    **Base URL:** `http://<activepieces-host>:<port>/api/v1`
+  version: 1.0.0
+  contact:
+    name: Internal
+
+servers:
+  - url: http://localhost:4200/api/v1
+    description: Local development (via Vite proxy)
+  - url: http://localhost:3000/api/v1
+    description: Local development (direct API)
+
+security:
+  - InternalApiKey: []
+
+components:
+  securitySchemes:
+    InternalApiKey:
+      type: apiKey
+      in: header
+      name: x-internal-api-key
+      description: Shared secret set via `AP_INTERNAL_API_KEY` environment variable.
+
+  schemas:
+    Project:
+      type: object
+      properties:
+        id:
+          type: string
+          example: 4TIN6SrZvezQI8A08vMho
+        created:
+          type: string
+          format: date-time
+        updated:
+          type: string
+          format: date-time
+        deleted:
+          type: string
+          format: date-time
+          nullable: true
+        ownerId:
+          type: string
+        displayName:
+          type: string
+        platformId:
+          type: string
+        maxConcurrentJobs:
+          type: integer
+          nullable: true
+        type:
+          type: string
+          enum: [PERSONAL, TEAM]
+        externalId:
+          type: string
+          nullable: true
+        releasesEnabled:
+          type: boolean
+        metadata:
+          type: object
+          nullable: true
+
+    Flow:
+      type: object
+      properties:
+        id:
+          type: string
+        created:
+          type: string
+          format: date-time
+        updated:
+          type: string
+          format: date-time
+        projectId:
+          type: string
+        externalId:
+          type: string
+        ownerId:
+          type: string
+        folderId:
+          type: string
+          nullable: true
+        status:
+          type: string
+          enum: [ENABLED, DISABLED]
+        publishedVersionId:
+          type: string
+          nullable: true
+        metadata:
+          type: object
+          nullable: true
+        version:
+          $ref: '#/components/schemas/FlowVersion'
+
+    FlowVersion:
+      type: object
+      properties:
+        id:
+          type: string
+        created:
+          type: string
+          format: date-time
+        updated:
+          type: string
+          format: date-time
+        flowId:
+          type: string
+        displayName:
+          type: string
+        trigger:
+          type: object
+        valid:
+          type: boolean
+        state:
+          type: string
+          enum: [DRAFT, LOCKED]
+
+    FlowRun:
+      type: object
+      properties:
+        id:
+          type: string
+        created:
+          type: string
+          format: date-time
+        updated:
+          type: string
+          format: date-time
+        projectId:
+          type: string
+        flowId:
+          type: string
+        flowVersionId:
+          type: string
+        flowDisplayName:
+          type: string
+        status:
+          type: string
+          enum: [RUNNING, SUCCEEDED, FAILED, PAUSED, TIMEOUT, INTERNAL_ERROR, STOPPED, QUOTA_EXCEEDED, MEMORY_LIMIT_EXCEEDED]
+        startTime:
+          type: string
+          format: date-time
+        finishTime:
+          type: string
+          format: date-time
+          nullable: true
+        duration:
+          type: integer
+          nullable: true
+
+    SeekPage:
+      type: object
+      properties:
+        data:
+          type: array
+          items: {}
+        next:
+          type: string
+          nullable: true
+        previous:
+          type: string
+          nullable: true
+
+    Error:
+      type: object
+      properties:
+        statusCode:
+          type: integer
+        code:
+          type: string
+        error:
+          type: string
+        message:
+          type: string
+
+paths:
+  # ── Projects ──────────────────────────────────────────────
+
+  /projects:
+    post:
+      tags: [Projects]
+      summary: Create a project
+      description: |
+        Creates a new TEAM project mapped to your external workspace/org.
+        Use `externalId` to store your own identifier for later lookup.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [displayName]
+              properties:
+                displayName:
+                  type: string
+                  example: Org ABC
+                externalId:
+                  type: string
+                  nullable: true
+                  example: org-abc-123
+                metadata:
+                  type: object
+                  nullable: true
+                maxConcurrentJobs:
+                  type: integer
+                  nullable: true
+      responses:
+        '201':
+          description: Project created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Project'
+
+    get:
+      tags: [Projects]
+      summary: List all projects
+      description: Returns all non-deleted projects for the platform.
+      responses:
+        '200':
+          description: Paginated list of projects
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SeekPage'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/Project'
+
+  /projects/{id}:
+    get:
+      tags: [Projects]
+      summary: Get a project by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Project details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Project'
+
+    post:
+      tags: [Projects]
+      summary: Update a project
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                displayName:
+                  type: string
+      responses:
+        '200':
+          description: Updated project
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Project'
+
+    delete:
+      tags: [Projects]
+      summary: Soft-delete a project
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '204':
+          description: Project deleted
+
+  # ── Flows ─────────────────────────────────────────────────
+
+  /flows:
+    post:
+      tags: [Flows]
+      summary: Create a flow
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [projectId, displayName]
+              properties:
+                projectId:
+                  type: string
+                  description: ID of the project this flow belongs to.
+                displayName:
+                  type: string
+                  example: My Automation Flow
+      responses:
+        '201':
+          description: Flow created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Flow'
+
+    get:
+      tags: [Flows]
+      summary: List flows in a project
+      parameters:
+        - name: projectId
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 10
+        - name: cursor
+          in: query
+          schema:
+            type: string
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [ENABLED, DISABLED]
+      responses:
+        '200':
+          description: Paginated list of flows
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SeekPage'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/Flow'
+
+  /flows/{flowId}:
+    get:
+      tags: [Flows]
+      summary: Get a flow by ID
+      parameters:
+        - name: flowId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Flow details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Flow'
+
+    post:
+      tags: [Flows]
+      summary: Update a flow (operations)
+      description: |
+        Applies an operation to the flow. Operations include:
+
+        - `UPDATE_TRIGGER` — Set or change the trigger (schedule, webhook, piece trigger)
+        - `ADD_ACTION` — Add a step after an existing step
+        - `UPDATE_ACTION` — Modify an existing step
+        - `DELETE_ACTION` — Remove a step
+        - `LOCK_AND_PUBLISH` — Lock the draft and create a published version
+        - `CHANGE_STATUS` — Enable or disable the flow
+        - `CHANGE_NAME` — Rename the flow
+      parameters:
+        - name: flowId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              oneOf:
+                - $ref: '#/components/schemas/UpdateTriggerOp'
+                - $ref: '#/components/schemas/AddActionOp'
+                - $ref: '#/components/schemas/LockAndPublishOp'
+                - $ref: '#/components/schemas/ChangeStatusOp'
+                - $ref: '#/components/schemas/ChangeNameOp'
+              discriminator:
+                propertyName: type
+      responses:
+        '200':
+          description: Updated flow
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Flow'
+
+    delete:
+      tags: [Flows]
+      summary: Delete a flow
+      parameters:
+        - name: flowId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '204':
+          description: Flow deleted
+
+  /flows/{flowId}/versions:
+    get:
+      tags: [Flows]
+      summary: List flow versions
+      parameters:
+        - name: flowId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 10
+        - name: cursor
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Paginated list of versions
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SeekPage'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/FlowVersion'
+
+  # ── Flow Runs ─────────────────────────────────────────────
+
+  /flow-runs:
+    get:
+      tags: [Flow Runs]
+      summary: List flow runs
+      parameters:
+        - name: projectId
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: flowId
+          in: query
+          schema:
+            type: string
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [RUNNING, SUCCEEDED, FAILED, PAUSED, TIMEOUT, INTERNAL_ERROR, STOPPED]
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 10
+        - name: cursor
+          in: query
+          schema:
+            type: string
+        - name: createdAfter
+          in: query
+          schema:
+            type: string
+            format: date-time
+        - name: createdBefore
+          in: query
+          schema:
+            type: string
+            format: date-time
+      responses:
+        '200':
+          description: Paginated list of flow runs
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SeekPage'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/FlowRun'
+
+  /flow-runs/{id}:
+    get:
+      tags: [Flow Runs]
+      summary: Get a flow run by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Flow run details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FlowRun'
+
+  # ── Webhooks ──────────────────────────────────────────────
+
+  /webhooks/{flowId}:
+    post:
+      tags: [Webhooks]
+      summary: Trigger a webhook flow
+      description: |
+        Sends a payload to a flow configured with a webhook trigger.
+        This endpoint is PUBLIC (no auth required) — the `flowId` in the URL
+        acts as the secret. Secure it by keeping the flow ID private.
+      security: []
+      parameters:
+        - name: flowId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              description: Arbitrary JSON payload passed to the flow trigger.
+              example:
+                event: order.created
+                orderId: "12345"
+      responses:
+        '200':
+          description: Webhook accepted and flow triggered
+
+  # ── App Connections ───────────────────────────────────────
+
+  /app-connections:
+    get:
+      tags: [App Connections]
+      summary: List connections in a project
+      parameters:
+        - name: projectId
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: pieceName
+          in: query
+          schema:
+            type: string
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 10
+        - name: cursor
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Paginated list of connections
+
+    post:
+      tags: [App Connections]
+      summary: Create or update a connection
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [projectId, pieceName, displayName, type, value]
+              properties:
+                projectId:
+                  type: string
+                pieceName:
+                  type: string
+                  example: '@activepieces/piece-slack'
+                displayName:
+                  type: string
+                  example: My Slack
+                type:
+                  type: string
+                  enum: [SECRET_TEXT, OAUTH2, CUSTOM_AUTH, BASIC_AUTH, BEARER_TOKEN]
+                value:
+                  type: object
+                  description: Connection credentials (varies by type)
+      responses:
+        '201':
+          description: Connection created
+
+  # ── Pieces ────────────────────────────────────────────────
+
+  /pieces:
+    get:
+      tags: [Pieces]
+      summary: List available pieces
+      parameters:
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 100
+        - name: cursor
+          in: query
+          schema:
+            type: string
+        - name: searchQuery
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Paginated list of pieces
+
+  # ── Operation Schemas (for flow update) ───────────────────
+
+  UpdateTriggerOp:
+    type: object
+    required: [type, request]
+    properties:
+      type:
+        type: string
+        enum: [UPDATE_TRIGGER]
+      request:
+        type: object
+        required: [name, displayName, type, valid, settings]
+        properties:
+          name:
+            type: string
+            example: trigger
+          displayName:
+            type: string
+          type:
+            type: string
+            enum: [PIECE_TRIGGER, EMPTY]
+          valid:
+            type: boolean
+          settings:
+            type: object
+            properties:
+              pieceName:
+                type: string
+              pieceVersion:
+                type: string
+              triggerName:
+                type: string
+              input:
+                type: object
+              inputUiInfo:
+                type: object
+              propertySettings:
+                type: object
+              packageType:
+                type: string
+                enum: [REGISTRY, ARCHIVE]
+              pieceType:
+                type: string
+                enum: [OFFICIAL, COMMUNITY, CUSTOM]
+
+  AddActionOp:
+    type: object
+    required: [type, request]
+    properties:
+      type:
+        type: string
+        enum: [ADD_ACTION]
+      request:
+        type: object
+        required: [parentStep, stepLocationRelativeToParent, action]
+        properties:
+          parentStep:
+            type: string
+            example: trigger
+          stepLocationRelativeToParent:
+            type: string
+            enum: [AFTER, INSIDE_TRUE_BRANCH, INSIDE_FALSE_BRANCH, INSIDE_LOOP]
+          action:
+            type: object
+            required: [name, displayName, type, valid, settings]
+            properties:
+              name:
+                type: string
+                example: step_1
+              displayName:
+                type: string
+              type:
+                type: string
+                enum: [CODE, PIECE, BRANCH, LOOP_ON_ITEMS]
+              valid:
+                type: boolean
+              settings:
+                type: object
+
+  LockAndPublishOp:
+    type: object
+    required: [type, request]
+    properties:
+      type:
+        type: string
+        enum: [LOCK_AND_PUBLISH]
+      request:
+        type: object
+
+  ChangeStatusOp:
+    type: object
+    required: [type, request]
+    properties:
+      type:
+        type: string
+        enum: [CHANGE_STATUS]
+      request:
+        type: object
+        required: [status]
+        properties:
+          status:
+            type: string
+            enum: [ENABLED, DISABLED]
+
+  ChangeNameOp:
+    type: object
+    required: [type, request]
+    properties:
+      type:
+        type: string
+        enum: [CHANGE_NAME]
+      request:
+        type: object
+        required: [displayName]
+        properties:
+          displayName:
+            type: string

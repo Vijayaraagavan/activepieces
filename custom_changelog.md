@@ -26,6 +26,24 @@ Welcome to our customized fork of Activepieces! To avoid merge conflict nightmar
 * All the custom docs are written to [docs/custom](docs/custom)
 * 2026-03-22 | [docs/custom/ngrok-webhook-dev-setup.md](docs/custom/ngrok-webhook-dev-setup.md) | Codex | Added troubleshooting notes for local webhook testing with ngrok, including the `4200` vs `3000` routing confusion, `AP_FRONTEND_URL` behavior, and Vite `allowedHosts` requirement.
 * 2026-03-23 | [docs/custom/headless-activepieces-architecture.md](docs/custom/headless-activepieces-architecture.md) | Codex | Documented the headless Activepieces architecture: external workspace/org to Activepieces team project mapping, backend-owned users and permissions, Activepieces as connection/workflow control plane, and custom backend responsibility for direct actions and sync pipelines.
+* 2026-04-03 | [docs/custom/headless-openapi.yaml](docs/custom/headless-openapi.yaml) | Cursor | OpenAPI 3.0 spec for the headless internal API (projects, flows, flow runs, webhooks, connections, pieces).
+* 2026-04-03 | [docs/custom/headless-api-testing.md](docs/custom/headless-api-testing.md) | Cursor | Curl-based API testing guide covering the full flow lifecycle, webhook triggers, connections, and an end-to-end script.
+
+### Headless Internal Auth Bypass (Superuser Principal)
+*Implemented 2026-04-03. Allows backend-to-backend access via `x-internal-api-key` header, bypassing all auth/authz for trusted internal requests.*
+
+* 2026-04-03 | `packages/server/api/src/app/helper/system/system-props.ts` | Cursor | Added `INTERNAL_API_KEY`, `INTERNAL_PLATFORM_ID` env vars (tagged `MY_CUSTOM_START: Headless internal auth env vars`)
+* 2026-04-03 | `packages/server/api/src/app/core/security/v2/authn/authentication-middleware.ts` | Cursor | Added internal request detection (`isInternalRequest`), platform owner ID caching (`resolveOwnerIdOnce`), and USER principal injection for headless bypass (tagged `MY_CUSTOM_START: Headless internal auth bypass`)
+* 2026-04-03 | `packages/server/api/src/app/core/security/v2/authz/authorization-middleware.ts` | Cursor | Skip `authorizeOrThrow` for internal requests while preserving `projectId` extraction (tagged `MY_CUSTOM_START: Headless authz bypass import` and `MY_CUSTOM_START: Skip authorization for headless internal requests`)
+* 2026-04-03 | `packages/server/api/src/app/project/project-controller.ts` | Cursor | Replaced community project controller with headless multi-project controller: `POST /` (create TEAM projects with externalId), `GET /` (list all platform projects for internal), `DELETE /:id` (soft-delete) (tagged `MY_CUSTOM_START: Headless multi-project controller`)
+* 2026-04-03 | `packages/server/api/src/app/helper/system-validator.ts` | Cursor | Added validators for `INTERNAL_API_KEY`, `INTERNAL_PLATFORM_ID`, `INTERNAL_URL` (tagged `MY_CUSTOM_START: Headless internal auth validators`)
+
+### Startup Optimization (Skip Migrations)
+*Implemented 2026-04-03. Allows skipping DB migrations on restart via `AP_SKIP_MIGRATIONS=true` for faster dev startup.*
+
+* 2026-04-03 | `packages/server/api/src/app/helper/system/system-props.ts` | Cursor | Added `SKIP_MIGRATIONS` env var (tagged `MY_CUSTOM_START: Skip migrations for faster dev restart`)
+* 2026-04-03 | `packages/server/api/src/main.ts` | Cursor | Conditionally skip migration distributed lock when `AP_SKIP_MIGRATIONS=true` (tagged `MY_CUSTOM_START: Skip migrations for faster dev restart`)
+* 2026-04-03 | `packages/server/api/src/app/helper/system-validator.ts` | Cursor | Added `SKIP_MIGRATIONS` boolean validator (tagged `MY_CUSTOM_START: Skip migrations validator`)
 
 ### exclude enterprise editon that are licensed
 * we must not use the below modules in self host due to licensing restriction. remove them during fork sync or merge.
