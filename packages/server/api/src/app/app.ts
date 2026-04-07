@@ -325,6 +325,10 @@ export const setupApp = async (app: FastifyInstance): Promise<FastifyInstance> =
         case ApEdition.COMMUNITY:
             await app.register(projectModule)
             await app.register(communityPiecesModule)
+            // --- MY_CUSTOM: Enable Platform OAuth for headless usage ---
+            await app.register(oauthAppModule)
+            setPlatformOAuthService(platformOAuth2Service(app.log))
+            // --- END ---
             break
     }
 

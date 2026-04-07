@@ -180,7 +180,10 @@ export const oauth2Util = (log: FastifyBaseLogger) => ({
             || connection.value.type === AppConnectionType.PLATFORM_OAUTH2) {
             connection.value = {
                 ...connection.value,
-                refresh_token: '(REDACTED)',
+                // --- MY_CUSTOM: Use undefined instead of '(REDACTED)' to prevent googleapis
+                // from attempting auto-refresh (it checks for truthy refresh_token) ---
+                refresh_token: undefined as unknown as string,
+                // --- END ---
             }
         }
         return connection
