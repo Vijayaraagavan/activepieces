@@ -149,6 +149,7 @@ const systemPropValidators: {
     // --- MY_CUSTOM_START: Headless internal auth validators ---
     [AppSystemProp.INTERNAL_API_KEY]: stringValidator,
     [AppSystemProp.INTERNAL_PLATFORM_ID]: stringValidator,
+    [AppSystemProp.INTERNAL_OAUTH_PLATFORM_ID]: stringValidator,
     [AppSystemProp.INTERNAL_URL]: stringValidator,
     // --- MY_CUSTOM_END ---
     [AppSystemProp.WORKERS]: numberValidator,

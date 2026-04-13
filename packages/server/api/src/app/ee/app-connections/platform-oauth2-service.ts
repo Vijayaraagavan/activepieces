@@ -14,6 +14,16 @@ import {
 import { credentialsOauth2Service } from '../../app-connection/app-connection-service/oauth2/services/credentials-oauth2-service'
 import { pieceMetadataService } from '../../pieces/metadata/piece-metadata-service'
 import { oauthAppService } from '../oauth-apps/oauth-app.service'
+// --- MY_CUSTOM_START: Shared OAuth platform lookup ---
+import { system } from '../../helper/system/system'
+import { AppSystemProp } from '../../helper/system/system-props'
+
+const INTERNAL_OAUTH_PLATFORM_ID = system.get(AppSystemProp.INTERNAL_OAUTH_PLATFORM_ID)
+
+function oauthLookupPlatformId(platformId: string): string {
+    return INTERNAL_OAUTH_PLATFORM_ID ?? platformId
+}
+// --- MY_CUSTOM_END ---
 
 export const platformOAuth2Service = (log: FastifyBaseLogger) => ({
     claim: async ({
@@ -47,7 +57,9 @@ export const platformOAuth2Service = (log: FastifyBaseLogger) => ({
         const oauth2App = await oauthAppService.getWithSecret({
             pieceName,
             clientId: request.clientId,
-            platformId,
+            // --- MY_CUSTOM_START: Shared OAuth platform lookup ---
+            platformId: oauthLookupPlatformId(platformId),
+            // --- MY_CUSTOM_END ---
         })
 
         const claimedValue = await credentialsOauth2Service(log).claim({
@@ -74,7 +86,9 @@ export const platformOAuth2Service = (log: FastifyBaseLogger) => ({
         const oauth2App = await oauthAppService.getWithSecret({
             pieceName,
             clientId: connectionValue.client_id,
-            platformId,
+            // --- MY_CUSTOM_START: Shared OAuth platform lookup ---
+            platformId: oauthLookupPlatformId(platformId),
+            // --- MY_CUSTOM_END ---
         })
         const newValue = await credentialsOauth2Service(log).refresh({
             pieceName,

@@ -357,6 +357,9 @@ import { MergeCanaryAndDedicatedWorkersIntoWorkerGroupId1775656136000 } from './
 import { AddAiProvidersEnabledToPlatformPlan1775728983000 } from './migration/postgres/1775728983000-AddAiProvidersEnabledToPlatformPlan'
 import { AddConcurrencyPoolTable1775800000000 } from './migration/postgres/1775800000000-AddConcurrencyPoolTable'
 import { AddDefaultToAiProvidersEnabled1776000000000 } from './migration/postgres/1776000000000-AddDefaultToAiProvidersEnabled'
+// MY_CUSTOM_START: Allow multiple platforms per owner (multi-tenant support)
+import { RemovePlatformOwnerUniqueConstraint1776023700000 } from '../ee/database/migrations/postgres/20260412195500-remove-platform-owner-unique'
+// MY_CUSTOM_END
 
 const getSslConfig = (): boolean | TlsOptions => {
     const useSsl = system.get(AppSystemProp.POSTGRES_USE_SSL)
@@ -729,6 +732,9 @@ export const getMigrations = (): (new () => Migration)[] => {
         AddAiProvidersEnabledToPlatformPlan1775728983000,
         AddConcurrencyPoolTable1775800000000,
         AddDefaultToAiProvidersEnabled1776000000000,
+        // MY_CUSTOM_START: Allow multiple platforms per owner (multi-tenant support)
+        RemovePlatformOwnerUniqueConstraint1776023700000,
+        // MY_CUSTOM_END
     ]
     return migrations
 }

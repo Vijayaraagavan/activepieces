@@ -30,6 +30,17 @@ import { platformService } from './platform.service'
 
 const edition = system.getEdition()
 export const platformController: FastifyPluginAsyncZod = async (app) => {
+    // --- MY_CUSTOM_START: Headless platform provisioning endpoint ---
+    app.post('/', CreatePlatformRequest, async (req, reply) => {
+        const created = await platformService(req.log).create({
+            ownerId: req.principal.id,
+            name: req.body.name,
+        })
+        const platform = await platformService(req.log).getOneWithPlanOrThrow(created.id)
+        return reply.status(StatusCodes.CREATED).send(platform)
+    })
+    // --- MY_CUSTOM_END ---
+
     app.post('/:id', UpdatePlatformRequest, async (req, _res) => {
         const platformId = req.principal.platform.id
 
@@ -174,6 +185,22 @@ const UpdatePlatformRequest = {
     },
 }
 
+// --- MY_CUSTOM_START: Headless platform provisioning endpoint ---
+const CreatePlatformRequest = {
+    config: {
+        security: securityAccess.platformAdminOnly([PrincipalType.USER]),
+    },
+    schema: {
+        body: z.object({
+            name: z.string().min(1).max(255),
+        }),
+        response: {
+            [StatusCodes.CREATED]: PlatformWithoutSensitiveData,
+        },
+    },
+}
+// --- MY_CUSTOM_END ---
+
 
 const GetPlatformRequest = {
     config: {
@@ -213,4 +240,3 @@ const GetAssetRequest = {
         }),
     },
 }
-

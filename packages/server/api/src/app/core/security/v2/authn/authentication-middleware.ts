@@ -1,6 +1,6 @@
 import { isNil, PrincipalType } from '@activepieces/shared'
 import { FastifyRequest } from 'fastify'
-// --- MY_CUSTOM_START: Headless internal auth bypass imports ---
+// --- MY_CUSTOM_START: Headless internal multi-platform auth imports ---
 import { system } from '../../../../helper/system/system'
 import { AppSystemProp } from '../../../../helper/system/system-props'
 import { platformService } from '../../../../platform/platform.service'
@@ -8,20 +8,27 @@ import { platformService } from '../../../../platform/platform.service'
 import { RouteKind } from '../../authorization/common'
 import { authenticateOrThrow } from './authenticate'
 
-// --- MY_CUSTOM_START: Headless internal auth bypass ---
+// --- MY_CUSTOM_START: Headless internal multi-platform auth ---
 const INTERNAL_API_KEY = system.get(AppSystemProp.INTERNAL_API_KEY)
-const INTERNAL_PLATFORM_ID = system.get(AppSystemProp.INTERNAL_PLATFORM_ID)
+const platformOwnerCache = new Map<string, string>()
 
-let cachedOwnerId: string | null = null
-
-async function resolveOwnerIdOnce(log: Parameters<typeof platformService>[0]): Promise<string> {
-    if (cachedOwnerId) return cachedOwnerId
-    if (isNil(INTERNAL_PLATFORM_ID)) {
-        throw new Error('AP_INTERNAL_PLATFORM_ID must be set when AP_INTERNAL_API_KEY is configured')
+function getInternalPlatformId(request: FastifyRequest): string {
+    const raw = request.headers['x-internal-platform-id']
+    if (Array.isArray(raw)) {
+        throw new Error('x-internal-platform-id must be a single value')
     }
-    const platform = await platformService(log).getOneOrThrow(INTERNAL_PLATFORM_ID)
-    cachedOwnerId = platform.ownerId
-    return cachedOwnerId
+    if (isNil(raw) || raw.trim() === '') {
+        throw new Error('x-internal-platform-id is required for internal requests')
+    }
+    return raw
+}
+
+async function resolveOwnerId(log: Parameters<typeof platformService>[0], platformId: string): Promise<string> {
+    const cachedOwnerId = platformOwnerCache.get(platformId)
+    if (cachedOwnerId) return cachedOwnerId
+    const platform = await platformService(log).getOneOrThrow(platformId)
+    platformOwnerCache.set(platformId, platform.ownerId)
+    return platform.ownerId
 }
 
 export function isInternalRequest(request: FastifyRequest): boolean {
@@ -31,13 +38,14 @@ export function isInternalRequest(request: FastifyRequest): boolean {
 // --- MY_CUSTOM_END ---
 
 export const authenticationMiddleware = async (request: FastifyRequest): Promise<void> => {
-    // --- MY_CUSTOM_START: Headless internal auth bypass ---
+    // --- MY_CUSTOM_START: Headless internal multi-platform auth ---
     if (isInternalRequest(request)) {
-        const ownerId = await resolveOwnerIdOnce(request.log)
+        const platformId = getInternalPlatformId(request)
+        const ownerId = await resolveOwnerId(request.log, platformId)
         request.principal = {
             id: ownerId,
             type: PrincipalType.USER,
-            platform: { id: INTERNAL_PLATFORM_ID! },
+            platform: { id: platformId },
             tokenVersion: undefined,
         }
         return
@@ -56,4 +64,3 @@ export const authenticationMiddleware = async (request: FastifyRequest): Promise
     const principal = await authenticateOrThrow(request.log, request.headers['authorization'] ?? null)
     request.principal = principal
 }
-

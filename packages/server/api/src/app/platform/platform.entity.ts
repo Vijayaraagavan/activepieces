@@ -75,8 +75,9 @@ export const PlatformEntity = new EntitySchema<PlatformSchema>({
     },
     indices: [],
     relations: {
+        // MY_CUSTOM_START: Changed from one-to-one to many-to-one to allow multiple platforms per owner (multi-tenant support)
         owner: {
-            type: 'one-to-one',
+            type: 'many-to-one',
             target: 'user',
             onDelete: 'RESTRICT',
             onUpdate: 'RESTRICT',
@@ -86,5 +87,6 @@ export const PlatformEntity = new EntitySchema<PlatformSchema>({
                 foreignKeyConstraintName: 'fk_platform_user',
             },
         },
+        // MY_CUSTOM_END
     },
 })

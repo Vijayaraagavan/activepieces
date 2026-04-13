@@ -2,9 +2,6 @@ import { isNil, PrincipalType } from '@activepieces/shared'
 import { FastifyRequest } from 'fastify'
 import { AuthorizationRouteSecurity } from '../../authorization/authorization'
 import { AuthorizationType, ProjectResourceType, RouteKind } from '../../authorization/common'
-// --- MY_CUSTOM_START: Headless authz bypass import ---
-import { isInternalRequest } from '../authn/authentication-middleware'
-// --- MY_CUSTOM_END ---
 import { authorizeOrThrow } from './authorize'
 import { projectIdExtractor } from './projectIdExtractor'
 
@@ -12,11 +9,8 @@ import { projectIdExtractor } from './projectIdExtractor'
 export const authorizationMiddleware = async (request: FastifyRequest): Promise<void> => {
     const security = request.routeOptions.config?.security
     const securityAccessRequest = await convertToSecurityAccessRequest(request)
-
-    // --- MY_CUSTOM_START: Skip authorization for headless internal requests ---
-    if (!isInternalRequest(request)) {
-        await authorizeOrThrow(request.principal, securityAccessRequest, request.log)
-    }
+    // --- MY_CUSTOM_START: Enforce authz for internal requests ---
+    await authorizeOrThrow(request.principal, securityAccessRequest, request.log)
     // --- MY_CUSTOM_END ---
 
     const requestPath = request.routeOptions.config.url

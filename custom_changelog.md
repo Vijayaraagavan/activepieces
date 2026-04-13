@@ -29,6 +29,7 @@ Welcome to our customized fork of Activepieces! To avoid merge conflict nightmar
 * 2026-04-03 | [docs/custom/headless-openapi.yaml](docs/custom/headless-openapi.yaml) | Cursor | OpenAPI 3.0 spec for the headless internal API (projects, flows, flow runs, webhooks, connections, pieces).
 * 2026-04-03 | [docs/custom/headless-api-testing.md](docs/custom/headless-api-testing.md) | Cursor | Curl-based API testing guide covering the full flow lifecycle, webhook triggers, connections, and an end-to-end script.
 * 2026-04-03 | [docs/custom/admin-ui-guide.md](docs/custom/admin-ui-guide.md) | Cursor | Documentation for the Admin UI frontend app (setup, features, OAuth2 flow, templates).
+* 2026-04-12 | [docs/custom/per-org-platform-architecture.md](docs/custom/per-org-platform-architecture.md) | Codex | Full architecture doc for per-org AP platform: one platform per org, multiple platforms per owner, dynamic `x-internal-platform-id` routing, shared OAuth app credentials via `AP_INTERNAL_OAUTH_PLATFORM_ID`, backfill task, deployment checklist, and full file change summary.
 
 ### Admin UI — Headless API Testing App
 *Created 2026-04-03. Independent React frontend at `packages/custom/admin-ui/` for managing and testing headless AP APIs. No core file modifications — entirely new files.*
@@ -50,6 +51,25 @@ Welcome to our customized fork of Activepieces! To avoid merge conflict nightmar
 * 2026-04-03 | `packages/server/api/src/app/helper/system/system-props.ts` | Cursor | Added `SKIP_MIGRATIONS` env var (tagged `MY_CUSTOM_START: Skip migrations for faster dev restart`)
 * 2026-04-03 | `packages/server/api/src/main.ts` | Cursor | Conditionally skip migration distributed lock when `AP_SKIP_MIGRATIONS=true` (tagged `MY_CUSTOM_START: Skip migrations for faster dev restart`)
 * 2026-04-03 | `packages/server/api/src/app/helper/system-validator.ts` | Cursor | Added `SKIP_MIGRATIONS` boolean validator (tagged `MY_CUSTOM_START: Skip migrations validator`)
+
+### Per-Org Platform Routing + Shared OAuth Lookup
+*Implemented 2026-04-12. Hardens headless multi-tenant routing so internal calls are platform-scoped, authz is enforced, and OAuth app credentials can remain globally shared.*
+
+* 2026-04-12 | `packages/server/api/src/app/core/security/v2/authn/authentication-middleware.ts` | Codex | Replaced static internal platform principal with dynamic `x-internal-platform-id` resolution and per-platform owner cache (tagged `MY_CUSTOM_START: Headless internal multi-platform auth`).
+* 2026-04-12 | `packages/server/api/src/app/core/security/v2/authz/authorization-middleware.ts` | Codex | Removed internal authz bypass so internal requests also pass `authorizeOrThrow` (tagged `MY_CUSTOM_START: Enforce authz for internal requests`).
+* 2026-04-12 | `packages/server/api/src/app/helper/system/system-props.ts` | Codex | Added `INTERNAL_OAUTH_PLATFORM_ID` env var for shared OAuth app lookup (tagged `MY_CUSTOM_START: Headless internal auth env vars`).
+* 2026-04-12 | `packages/server/api/src/app/helper/system-validator.ts` | Codex | Added validator for `INTERNAL_OAUTH_PLATFORM_ID` (tagged `MY_CUSTOM_START: Headless internal auth validators`).
+* 2026-04-12 | `packages/server/api/src/app/ee/app-connections/platform-oauth2-service.ts` | Codex | Added optional shared OAuth platform lookup override via `AP_INTERNAL_OAUTH_PLATFORM_ID` for claim/refresh app secret resolution (tagged `MY_CUSTOM_START: Shared OAuth platform lookup`).
+* 2026-04-12 | `packages/server/api/src/app/platform/platform.controller.ts` | Codex | Added internal platform provisioning endpoint `POST /v1/platforms` for backend org platform bootstrap flow (tagged `MY_CUSTOM_START: Headless platform provisioning endpoint`).
+
+### Multi-tenant: Multiple platforms per owner
+
+*Implemented 2026-04-12. Removes the unique constraint on `platform.ownerId` so a single admin user can own multiple platforms — one per org. Keeps AP's entity relation correct by using `many-to-one`. No user-per-org credential management needed.*
+
+* 2026-04-12 | `packages/server/api/src/app/platform/platform.entity.ts` | Codex | Changed `owner` relation from `one-to-one` to `many-to-one` (tagged `MY_CUSTOM_START: Allow multiple platforms per owner`).
+* 2026-04-12 | `packages/server/api/src/app/ee/database/migrations/postgres/20260412195500-remove-platform-owner-unique.ts` | Codex | New migration: drops `REL_94d6fd6494f0322c6f0e099141` unique constraint on `platform.ownerId`.
+* 2026-04-12 | `packages/server/api/src/app/database/postgres-connection.ts` | Codex | Registered `RemovePlatformOwnerUniqueConstraint1776023700000` migration (tagged `MY_CUSTOM_START: Allow multiple platforms per owner`).
+* 2026-04-12 | `packages/server/api/src/app/ee/database/migrations/postgres/20260412195500-remove-platform-owner-unique.ts` | Codex | Fixed migration class name and `name` property to use 13-digit JS timestamp `1776023700000` (TypeORM requirement).
 
 ### exclude enterprise editon that are licensed
 * we must not use the below modules in self host due to licensing restriction. remove them during fork sync or merge.
