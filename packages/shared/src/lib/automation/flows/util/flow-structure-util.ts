@@ -114,6 +114,9 @@ function transferFlow<T extends Step>(
     transferFunction: (step: T) => T,
 ): FlowVersion {
     const clonedFlow = JSON.parse(JSON.stringify(flowVersion))
+    if (!clonedFlow.trigger) {
+        return clonedFlow
+    }
     clonedFlow.trigger = transferStep(
         clonedFlow.trigger,
         transferFunction,

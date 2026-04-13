@@ -75,7 +75,7 @@ export const flowController: FastifyPluginAsyncZod = async (app) => {
             }),
         },
         preValidation: async (request) => {
-            if (request.body?.type === FlowOperationType.IMPORT_FLOW) {
+            if (request.body?.type === FlowOperationType.IMPORT_FLOW && request.body.request?.trigger) {
                 const migratedFlowTemplate = await migrateFlowVersionTemplate({
                     displayName: request.body.request.displayName,
                     trigger: request.body.request.trigger,

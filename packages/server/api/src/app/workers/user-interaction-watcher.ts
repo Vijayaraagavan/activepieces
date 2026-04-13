@@ -8,6 +8,7 @@ const WATCHER_SAFETY_TIMEOUT_MS = 5 * 60 * 1000
 export const userInteractionWatcher = {
     submitAndWaitForResponse: async <T>(request: UserInteractionJobDataWithoutWatchingInformation, log: FastifyBaseLogger, requestId?: string): Promise<T> => {
         const id = requestId ?? apId()
+        log.info({ jobType: request.jobType, requestId: id }, '[userInteractionWatcher] Submitting job and waiting for response')
         await jobQueue(log).add({
             id,
             type: JobType.ONE_TIME,

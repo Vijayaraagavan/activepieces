@@ -460,7 +460,12 @@ export const flowService = (log: FastifyBaseLogger) => ({
                 flowId: flowToUpdate.id,
                 projectId: flowToUpdate.projectId,
                 simulate: false,
+                // --- MY_CUSTOM_START: ignoreError=true — best-effort disable before re-publish; webhook onDisable never dequeues ---
+                // ignoreError: true — the old trigger's disable is best-effort before re-publishing.
+                // For webhook/no-op triggers this is always safe; for polling triggers any stale
+                // schedule will be cleaned up when the new version is enabled.
                 ignoreError: true,
+                // --- MY_CUSTOM_END ---
             })
         }
 

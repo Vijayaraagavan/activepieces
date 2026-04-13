@@ -62,6 +62,14 @@ Welcome to our customized fork of Activepieces! To avoid merge conflict nightmar
 * 2026-04-12 | `packages/server/api/src/app/ee/app-connections/platform-oauth2-service.ts` | Codex | Added optional shared OAuth platform lookup override via `AP_INTERNAL_OAUTH_PLATFORM_ID` for claim/refresh app secret resolution (tagged `MY_CUSTOM_START: Shared OAuth platform lookup`).
 * 2026-04-12 | `packages/server/api/src/app/platform/platform.controller.ts` | Codex | Added internal platform provisioning endpoint `POST /v1/platforms` for backend org platform bootstrap flow (tagged `MY_CUSTOM_START: Headless platform provisioning endpoint`).
 
+### Webhook Auth + Publish Hang Fix
+*Implemented 2026-04-13. Fixes publish flow hanging forever on re-publish, and ensures webhook piece auth validation works end-to-end.*
+
+* 2026-04-13 | `packages/server/api/src/app/workers/user-interaction-watcher.ts` | Codex | Added 30s timeout (`USER_INTERACTION_TIMEOUT_MS = 30_000`) with warning log on timeout — prevents publish hanging when `catch_webhook#onDisable` EXECUTE_TRIGGER_HOOK job never dequeues from BullMQ (tagged `MY_CUSTOM_START: 30s timeout for publish flow`).
+* 2026-04-13 | `packages/server/api/src/app/flows/flow/flow.service.ts` | Codex | Set `ignoreError: true` on pre-publish trigger disable so a hung onDisable doesn't block republish (tagged `MY_CUSTOM_START: ignoreError=true — best-effort disable before re-publish`).
+* 2026-04-13 | `packages/pieces/core/webhook/src/lib/triggers/catch-hook.ts` | Codex | Added null guard in `verifyBasicAuth` (`!headerValue ||`) so a missing `Authorization` header returns `false` instead of throwing `TypeError`, preventing the engine from crashing and skipping run creation (tagged `MY_CUSTOM_START: Null-guard verifyBasicAuth`).
+* 2026-04-13 | `packages/pieces/core/webhook/dist/src/lib/triggers/catch-hook.js` | Codex | Same null guard fix in compiled dist — this is the file actually loaded by the sandbox for dev pieces (tagged `MY_CUSTOM_START: Null-guard verifyBasicAuth`).
+
 ### Multi-tenant: Multiple platforms per owner
 
 *Implemented 2026-04-12. Removes the unique constraint on `platform.ownerId` so a single admin user can own multiple platforms — one per org. Keeps AP's entity relation correct by using `many-to-one`. No user-per-org credential management needed.*

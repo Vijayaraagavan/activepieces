@@ -246,14 +246,16 @@ function verifyHeaderAuth(
   return headerValue === headerSecret;
 }
 
+// --- MY_CUSTOM_START: Null-guard verifyBasicAuth so missing Authorization header returns false instead of TypeError ---
 function verifyBasicAuth(
   headerValue: string,
   username: string,
   password: string
 ) {
-  if (!headerValue.toLocaleLowerCase().startsWith('basic ')) {
+  if (!headerValue || !headerValue.toLocaleLowerCase().startsWith('basic ')) {
     return false;
   }
+  // --- MY_CUSTOM_END ---
   const auth = headerValue.substring(6);
   const decodedAuth = Buffer.from(auth, 'base64').toString();
   const [receivedUsername, receivedPassword] = decodedAuth.split(':');
