@@ -62,6 +62,12 @@ Welcome to our customized fork of Activepieces! To avoid merge conflict nightmar
 * 2026-04-12 | `packages/server/api/src/app/ee/app-connections/platform-oauth2-service.ts` | Codex | Added optional shared OAuth platform lookup override via `AP_INTERNAL_OAUTH_PLATFORM_ID` for claim/refresh app secret resolution (tagged `MY_CUSTOM_START: Shared OAuth platform lookup`).
 * 2026-04-12 | `packages/server/api/src/app/platform/platform.controller.ts` | Codex | Added internal platform provisioning endpoint `POST /v1/platforms` for backend org platform bootstrap flow (tagged `MY_CUSTOM_START: Headless platform provisioning endpoint`).
 
+### Vite Checker TS Path Fix
+
+*Implemented 2026-04-13. Fixes TypeScript errors in Vite dev server (vite-plugin-checker) where `@/` path aliases failed to resolve under `tsc -b` (project references build mode) but work fine with `tsc -p`.*
+
+* 2026-04-13 | `packages/web/vite.config.mts` | Codex | Changed checker from `buildMode: true` / `tsconfig.json` to `buildMode: false` / `tsconfig.app.json` — resolves `@/` path alias failures in `tsc -b` mode (tagged `MY_CUSTOM_START: use tsconfig.app.json in non-build mode to fix @/ path alias resolution`).
+
 ### Webhook Auth + Publish Hang Fix
 *Implemented 2026-04-13. Fixes publish flow hanging forever on re-publish, and ensures webhook piece auth validation works end-to-end.*
 

@@ -108,13 +108,15 @@ export default defineConfig(({ command, mode }) => {
       }),
       ...(isDev
         ? [
+            // --- MY_CUSTOM_START: use tsconfig.app.json in non-build mode to fix @/ path alias resolution (tsc -b fails on project refs without composite) ---
             checker({
               typescript: {
-                buildMode: true,
-                tsconfigPath: './tsconfig.json',
+                buildMode: false,
+                tsconfigPath: './tsconfig.app.json',
                 root: __dirname,
               },
             }),
+            // --- MY_CUSTOM_END ---
           ]
         : []),
     ],
